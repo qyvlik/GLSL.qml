@@ -3,7 +3,7 @@
 import QmlProject 1.1
 
 Project {
-    mainFile: "main.qml"
+    //mainFile: "main.qml"
 
     /* Include .qml, .js, and image files from current directory and subdirectories */
     QmlFiles {
@@ -23,6 +23,28 @@ Project {
         directory: "."
         filter:"*.md"
     }
+
+    //! [OpenGL ES]
+    Files {
+        directory: "."
+        filter:"*.fsh"
+    }
+    Files {
+        directory: "."
+        filter:"*.vsh"
+    }
+    //! [OpenGL ES]
+
+    //! [OpenGL]
+    Files {
+        directory: "."
+        filter:"*.vert"
+    }
+    Files {
+        directory: "."
+        filter:"*.frag"
+    }
+    //! [OpenGL]
 
     /* List of plugin directories passed to QML runtime */
     // importPaths: [ "../exampleplugin" ]
