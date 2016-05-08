@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Glsl.qml by qyvlik</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Glsl.qml</h1>
+      <h2 class="project-tagline">Tell you how to use glsl in qml type ShaderEffect</h2>
+      <a href="https://github.com/qyvlik/GLSL.qml" class="btn">View on GitHub</a>
+      <a href="https://github.com/qyvlik/GLSL.qml/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/qyvlik/GLSL.qml/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="glslqml" class="anchor" href="#glslqml" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>GLSL.qml</h1>
+
+<p>Tell you how to use glsl in qml type ShaderEffect.</p>
+
+<p>qml中的glsl学习。</p>
+
+<blockquote>
+<p>注意：直接对 Item 的 <code>layer.effect</code> 设置着色器时，要设置 <code>layer.enabled: true</code>。</p>
+</blockquote>
+
+<h2>
+<a id="线性渐变" class="anchor" href="#%E7%BA%BF%E6%80%A7%E6%B8%90%E5%8F%98" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>线性渐变</h2>
+
+<div class="highlight highlight-source-qml"><pre><span class="pl-k">import</span> <span class="pl-en">QtQuick</span> <span class="pl-c1">2.0</span>
+
+<span class="pl-c1">ShaderEffect</span> {
+    id<span class="pl-k">:</span> root
+    width<span class="pl-k">:</span> <span class="pl-c1">400</span>
+    height<span class="pl-k">:</span> <span class="pl-c1">400</span>
+
+    <span class="pl-c">//![1]</span>
+    property size uResolution<span class="pl-k">:</span> <span class="pl-smi">Qt</span>.<span class="pl-c1">size</span>(<span class="pl-smi">root</span>.<span class="pl-c1">width</span>, <span class="pl-smi">root</span>.<span class="pl-c1">height</span>)
+    <span class="pl-c">//![1]</span>
+    fragmentShader<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span></span>
+<span class="pl-s"><span class="pl-ii">            uniform vec2 uResolution;</span></span>
+<span class="pl-s"><span class="pl-ii">            void main() {</span></span>
+<span class="pl-s"><span class="pl-ii">                vec2 position = gl_FragCoord.xy/uResolution;</span></span>
+<span class="pl-s"><span class="pl-ii">                float gradient = position.x;</span></span>
+<span class="pl-s"><span class="pl-ii">                gl_FragColor = vec4(0., gradient, 0., 1.);</span></span>
+<span class="pl-s">            }<span class="pl-pds">"</span></span>
+}</pre></div>
+
+<p>效果如下：</p>
+
+<p><img src="doc/images/001.png" alt="doc/images/001.png"></p>
+
+<p>进阶：</p>
+
+<pre><code>import QtQuick 2.0
+
+ShaderEffect {
+    id: root
+    width: 400
+    height: 400
+
+    property real value: 0
+    NumberAnimation on value {
+        duration: 2500
+        from: 0
+        to: 3
+        loops: Animation.Infinite
+    }
+
+    //![1]
+    property size uResolution: Qt.size(root.width, root.height)
+    //![1]
+
+    //![2]
+    // gl_FragCoord 这个片段独有的变量存放了当前片段相对窗口的坐标。
+    // 这个值是从顶点生成片段之后对图元进行固定函数插值的结果
+    // 你可以通过除法 gl_FragCoord.xy/uResolution 来把你的像素坐标转化到 0.0 ≤ xy ≤ 1.0 这个范围
+    // 这在很多时候能大大简化像素着色器的计算。
+    // 这也是 gl_FragColor 的绝佳取值范围，现在让我们来看一些渐变！
+    fragmentShader:"
+            uniform vec2 uResolution;
+            uniform float value;
+            void main() {
+                vec2 position = gl_FragCoord.xy/uResolution;
+                float gradient = (position.x+position.y)/value;
+                gl_FragColor = vec4(0., gradient, 0., 1.);
+            }"
+    // 通过修改 float gradient = position.x; 横向
+    // 通过修改 float gradient = position.y; 竖向
+    // float gradient = (position.x+position.y)/2.; 斜向
+    //![2]
+
+}
+</code></pre>
+
+<h2>
+<a id="2d-圆盘" class="anchor" href="#2d-%E5%9C%86%E7%9B%98" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2D 圆盘</h2>
+
+<pre><code>import QtQuick 2.0
+
+ShaderEffect {
+    id: root
+    width: 400
+    height: 400
+    property size uResolution: Qt.size(root.width, root.height)
+
+    fragmentShader:"
+            uniform vec2 uResolution;
+            void main() {
+                vec2 center = vec2(uResolution.x/2., uResolution.y/2.);
+
+                // 2
+                float radius = uResolution.x/2.;
+
+                // 3
+                vec2 position = gl_FragCoord.xy - center;
+
+                // 4
+                if (length(position) &gt; radius) {
+                  gl_FragColor = vec4(vec3(0.), 1.);
+                } else {
+                  gl_FragColor = vec4(vec3(1.), 1.);
+                }
+            }"
+}
+</code></pre>
+
+<p><img src="doc/images/002.png" alt="doc/images/002.png"></p>
+
+<ol>
+<li><p>圆盘的 center 会处于你屏幕的正中央。</p></li>
+<li><p>圆盘的 radius 会是你屏幕宽度的一半。</p></li>
+<li><p>position 是当前像素的坐标相对圆盘圆心的偏移值。可以想象成是一个向量从圆盘圆心指向当前位置。</p></li>
+<li>
+<p>length() 用于计算向量长度，在这个例子里长度是根据勾股定理 √(position.x²+position.y²) 来计算的。</p>
+
+<p>A.如果结果比 radius 大，说明当前像素在圆盘区域外，那么就染成黑色。</p>
+
+<p>B.否则，说明当前像素在圆盘区域内，染成白色。</p>
+</li>
+</ol>
+
+<p>作为对这个行为的补充说明，可以参看 圆形方程 (x-a)²+(y-b)² = r² 。注意 r 是半径， ab 是圆心，而 xy 是圆上所有点集。</p>
+
+<p>圆盘是平面上被圆形围住的一块区域，上面的 if-else 语句会准确的把它画出来！</p>
+
+<h2>
+<a id="细圆环" class="anchor" href="#%E7%BB%86%E5%9C%86%E7%8E%AF" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>细圆环</h2>
+
+<div class="highlight highlight-source-qml"><pre><span class="pl-k">import</span> <span class="pl-en">QtQuick</span> <span class="pl-c1">2.0</span>
+
+<span class="pl-c1">ShaderEffect</span> {
+    id<span class="pl-k">:</span> root
+    width<span class="pl-k">:</span> <span class="pl-c1">400</span>
+    height<span class="pl-k">:</span> <span class="pl-c1">400</span>
+    smooth<span class="pl-k">:</span> <span class="pl-c1">true</span>
+    property size uResolution<span class="pl-k">:</span> <span class="pl-smi">Qt</span>.<span class="pl-c1">size</span>(<span class="pl-smi">root</span>.<span class="pl-c1">width</span>, <span class="pl-smi">root</span>.<span class="pl-c1">height</span>)
+    fragmentShader<span class="pl-k">:</span><span class="pl-s"><span class="pl-pds">"</span></span>
+<span class="pl-s"><span class="pl-ii">            uniform vec2 uResolution;</span></span>
+<span class="pl-s"><span class="pl-ii">            void main() {</span></span>
+<span class="pl-s"><span class="pl-ii">                vec2 center = vec2(uResolution.x/2., uResolution.y/2.);</span></span>
+<span class="pl-s"><span class="pl-ii">                float radius = uResolution.x/2.;</span></span>
+<span class="pl-s"><span class="pl-ii">                vec2 position = gl_FragCoord.xy - center;</span></span>
+<span class="pl-s"><span class="pl-ii">                float thickness = radius/50.;</span></span>
+<span class="pl-s"></span>
+<span class="pl-s"><span class="pl-ii">                if ((length(position) &gt; radius) || (length(position) &lt; radius-thickness)) {</span></span>
+<span class="pl-s"><span class="pl-ii">                    gl_FragColor = vec4(vec3(0.), 1.);</span></span>
+<span class="pl-s"><span class="pl-ii">                } else {</span></span>
+<span class="pl-s"><span class="pl-ii">                    gl_FragColor = vec4(vec3(1.), 1.);</span></span>
+<span class="pl-s"><span class="pl-ii">                }</span></span>
+<span class="pl-s">            }<span class="pl-pds">"</span></span>
+}</pre></div>
+
+<p><img src="doc/images/003.png" alt="doc/images/003.png"></p>
+
+<blockquote>
+<p>试着根据 radius 创建一个叫 thickness 的新变量，并在 if-else 条件中使用。</p>
+</blockquote>
+
+<h2>
+<a id="3d球体" class="anchor" href="#3d%E7%90%83%E4%BD%93" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3D球体</h2>
+
+<pre><code>import QtQuick 2.0
+
+ShaderEffect {
+    id: root
+    width: 400
+    height: 400
+    smooth: true
+    property size uResolution: Qt.size(root.width, root.height)
+    fragmentShader:"
+            uniform vec2 uResolution;
+            void main() {
+                vec2 center = vec2(uResolution.x/2., uResolution.y/2.);
+                float radius = uResolution.x/2.;
+                vec2 position = gl_FragCoord.xy - center;
+                float thickness = radius/50.;
+                float z = sqrt(radius*radius - position.x*position.x - position.y*position.y);
+                z /= radius;
+                gl_FragColor = vec4(vec3(z), 1.);
+            }"
+}
+</code></pre>
+
+<p><img src="doc/images/004.png" alt="doc/images/004.png"></p>
+
+<hr>
+
+<p><a href="http://my.oschina.net/freeblues/blog/336055">为新手准备的 Codea 着色器（Shader）教程</a></p>
+
+<p><a href="http://www.tuicool.com/articles/VFnAFbB">OpenGL ES像素着色器教程</a></p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/qyvlik/GLSL.qml">Glsl.qml</a> is maintained by <a href="https://github.com/qyvlik">qyvlik</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
